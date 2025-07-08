@@ -64,7 +64,10 @@
     }
 
     async function shortenUrl() {
-      const longUrl = document.getElementById('longUrl').value.trim()
+      let longUrl = document.getElementById('longUrl').value.trim()
+      if (!/^https?:\/\//i.test(longUrl)) {
+        longUrl = 'https://' + longUrl
+      }
       const customId = document.getElementById('customId').value.trim()
       const resultDiv = document.getElementById('result')
       resultDiv.style.color = 'black'
