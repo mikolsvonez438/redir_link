@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Link Shortener</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 50px;
+      background: #f9f9f9;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      width: 300px;
+    }
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Link Shortener</h1>
+    <input type="text" id="longUrl" placeholder="Enter long URL" />
+    <input type="text" id="customId" placeholder="Custom short ID (optional)" />
+    <button id="shortenBtn">Shorten</button>
+    <div id="result"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+    const supabaseUrl = 'https://avbglzagmhgifgibobcu.supabase.co'
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2YmdsemFnbWhnaWZnaWJvYmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NDIwMTQsImV4cCI6MjA2NzUxODAxNH0.018Uiw1sZ-6qJ5aLQo10cJmTuWHiG_-Nv3HbwSMmAnY'
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    const pathname = window.location.pathname.replace(/^\/+/, '')
+
+    // If a short code is in the URL, handle redirection
+    if (pathname) {
+      document.body.innerHTML = '<p>Redirecting...</p>'
+      redirectToOriginal(pathname)
+    } else {
+      // Otherwise, attach the shortener logic
+      document.getElementById('shortenBtn').addEventListener('click', shortenUrl)
+    }
+
+    function generateShortId(length = 6) {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+      let result = ''
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+      }
+      return result
+    }
+
+    async function shortenUrl() {
+      const longUrl = document.getElementById('longUrl').value.trim()
+      const customId = document.getElementById('customId').value.trim()
+      const resultDiv = document.getElementById('result')
+      resultDiv.style.color = 'black'
+
+      if (!longUrl) return alert('Please enter a long URL.')
+
+      let shortId = customId || generateShortId()
+
+      if (customId) {
+        const { data: existing, error: fetchError } = await supabase
+          .from('links')
+          .select('id')
+          .eq('short', customId)
+
+        if (fetchError) {
+          console.error(fetchError)
+          resultDiv.textContent = 'Error checking custom ID.'
+          resultDiv.style.color = 'red'
+          return
+        }
+
+        if (existing.length > 0) {
+          resultDiv.textContent = 'Custom short ID already exists. Try another.'
+          resultDiv.style.color = 'red'
+          return
+        }
+      }
+
+      const { error } = await supabase
+        .from('links')
+        .insert([{ short: shortId, long: longUrl }])
+
+      if (error) {
+        console.error('Insert error:', error)
+        resultDiv.textContent = 'Error saving URL.'
+        resultDiv.style.color = 'red'
+      } else {
+        const shortUrl = `${window.location.origin}/${shortId}`
+        resultDiv.textContent = `Shortened URL: ${shortUrl}`
+        resultDiv.style.color = 'green'
+      }
+    }
+
+    async function redirectToOriginal(shortId) {
+      const { data, error } = await supabase
+        .from('links')
+        .select('long')
+        .eq('short', shortId)
+        .single()
+
+      if (error || !data) {
+        document.body.innerHTML = '<h2>Short URL not found 😢</h2>'
+        return
+      }
+
+      window.location.href = data.long
+    }
+  </script>
+</body>
+</html>
