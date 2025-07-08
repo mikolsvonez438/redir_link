@@ -47,6 +47,7 @@
 
     // If a short code is in the URL, handle redirection
     if (pathname) {
+      alert(pathname);
       document.body.innerHTML = '<p>Redirecting...</p>'
       redirectToOriginal(pathname)
     } else {
