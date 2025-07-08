@@ -24,6 +24,17 @@
     #result {
       margin-top: 20px;
       font-weight: bold;
+      text-align: center;
+    }
+    #copySuccess {
+      color: green;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+    #copyInput {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -34,6 +45,9 @@
     <input type="text" id="customId" placeholder="Custom short ID (optional)" />
     <button id="shortenBtn">Shorten</button>
     <div id="result"></div>
+    <button id="copyBtn" style="display:none;">Copy to Clipboard</button>
+    <div id="copySuccess"></div>
+    <input type="text" id="copyInput" readonly />
   </div>
 
   <script type="module">
@@ -45,13 +59,12 @@
 
     const pathname = window.location.pathname.replace(/^\/+/, '')
 
-    // If a short code is in the URL, handle redirection
     if (pathname) {
       document.body.innerHTML = '<p>Redirecting...</p>'
       redirectToOriginal(pathname)
     } else {
-      // Otherwise, attach the shortener logic
       document.getElementById('shortenBtn').addEventListener('click', shortenUrl)
+      document.getElementById('copyBtn').addEventListener('click', copyToClipboard)
     }
 
     function generateShortId(length = 6) {
@@ -68,9 +81,15 @@
       if (!/^https?:\/\//i.test(longUrl)) {
         longUrl = 'https://' + longUrl
       }
+
       const customId = document.getElementById('customId').value.trim()
       const resultDiv = document.getElementById('result')
+      const copyInput = document.getElementById('copyInput')
+      const copyBtn = document.getElementById('copyBtn')
+      const copySuccess = document.getElementById('copySuccess')
+
       resultDiv.style.color = 'black'
+      copySuccess.textContent = ''
 
       if (!longUrl) return alert('Please enter a long URL.')
 
@@ -108,7 +127,23 @@
         const shortUrl = `${window.location.origin}/${shortId}`
         resultDiv.textContent = `Shortened URL: ${shortUrl}`
         resultDiv.style.color = 'green'
+        copyInput.value = shortUrl
+        copyToClipboard() // auto-copy
+        copyBtn.style.display = 'inline-block'
       }
+    }
+
+    function copyToClipboard() {
+      const copyInput = document.getElementById('copyInput')
+      const copySuccess = document.getElementById('copySuccess')
+
+      navigator.clipboard.writeText(copyInput.value).then(() => {
+        copySuccess.textContent = 'Copied to clipboard!'
+      }).catch(err => {
+        console.error('Copy failed:', err)
+        copySuccess.textContent = 'Copy failed.'
+        copySuccess.style.color = 'red'
+      })
     }
 
     async function redirectToOriginal(shortId) {
@@ -122,8 +157,14 @@
         document.body.innerHTML = '<h2>Short URL not found 😢</h2>'
         return
       }
-console.log('Redirecting to:', data.long)
-      window.location.href = data.long
+
+      let targetUrl = data.long
+      if (!/^https?:\/\//i.test(targetUrl)) {
+        targetUrl = 'https://' + targetUrl
+      }
+
+      console.log('Redirecting to:', targetUrl)
+      window.location.href = targetUrl
     }
   </script>
 </body>
